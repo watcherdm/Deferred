@@ -1,6 +1,6 @@
 {
 	"name" : "Deferred",
-	"version" : "0.0.2",
+	"version" : "0.0.3",
 	"description" : "A port of the jQuery Deferred library to node js.",
 	"keywords" : [
 		"promises",
@@ -8,10 +8,10 @@
 		"deferred",
 		"jQuery"
 	],
-	"homepage" : "http://webspinner.github.com/nodeferred",
+	"homepage" : "http://webspinner.github.com/Deferred",
 	"main" : "deferred",
 	"repository" : {
 		"type" : "git",
-		"url" : "http://github.com/webspinner/nodeferred.git"
+		"url" : "git://github.com/webspinner/Deferred.git"
 	}
 }
