@@ -2,7 +2,7 @@ jQuery Deferred Library for Node js.
 
 Usage :
 
-var Deferred = require('Deferred');
+``var Deferred = require('Deferred');
 var when = Deferred.when;
 
 var dfd = new Deferred() // || Deferred()
@@ -14,4 +14,4 @@ dfd.done( function () {
 
 setTimeout( function(){
 	dfd.resolve();
-}, 1500 );
+}, 1500 );``
