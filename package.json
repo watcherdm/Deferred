@@ -8,6 +8,7 @@
 		"deferred",
 		"jQuery"
 	],
+	"engines" : ["node >= 0.2.2"],
 	"homepage" : "http://webspinner.github.com/Deferred",
 	"main" : "deferred",
 	"repository" : {
