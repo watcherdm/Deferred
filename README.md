@@ -1,6 +1,6 @@
 jQuery Deferred Library for Node js.
 ===========
-[git://github.com/webspinner/Deferred.git]
+[git://github.com/webspinner/Deferred.git "website"]
 Usage :
 
 ```javascript
