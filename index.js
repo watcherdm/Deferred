@@ -1,3 +1,5 @@
+(function(define){
+define([], function(){
 function _Deferred () {
 	if ( !( this instanceof _Deferred ) ) return new _Deferred();
 	var callbacks = [],
@@ -61,11 +63,11 @@ function _Deferred () {
 
 var promiseMethods = "done fail isResolved isRejected promise then always pipe".split( " " );
 
-var Deferred = module.exports = function Deferred ( func ) {
+var Deferred = function Deferred ( func ) {
 	var deferred = _Deferred(),
 		failDeferred = _Deferred(),
 		promise;
-	
+
 	deferred.then = function then ( doneCallbacks, failCallbacks ) {
 		deferred.done( doneCallbacks ).fail( failCallbacks );
 		return this;
@@ -123,7 +125,7 @@ var Deferred = module.exports = function Deferred ( func ) {
 	return deferred;
 }
 
-module.exports.when = function when ( firstParam ) {
+Deferred.when = function when ( firstParam ) {
 	var args = arguments,
 		i = 0,
 		length = args.length,
@@ -155,3 +157,14 @@ module.exports.when = function when ( firstParam ) {
 	}
 	return deferred.promise();
 }
+return Deferred;
+}); // define for AMD if available
+})(typeof define !== "undefined" ? define
+	// try to define as a CommonJS module instead
+	: typeof module !== "undefined" ? function(deps, factory) {
+		module.exports = factory();
+	}
+	// nothing good exists, just define on current context (ie window)
+	: function(deps, factory) { this.Deferred = factory(); }
+);
+
