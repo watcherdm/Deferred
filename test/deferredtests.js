@@ -1,6 +1,6 @@
 var vows = require("vows"),
 	assert = require("assert"),
-	Deferred = require("deferred");
+	Deferred = require("../index");
 
 vows.describe('Deferred Object').addBatch({
 	"when calling deferred as a function": {

@@ -1,6 +1,6 @@
 {
 	"name" : "Deferred",
-	"version" : "0.0.3",
+	"version" : "0.0.4",
 	"description" : "A port of the jQuery Deferred library to node js.",
 	"keywords" : [
 		"promises",
@@ -14,5 +14,20 @@
 	"repository" : {
 		"type" : "git",
 		"url" : "git://github.com/webspinner/Deferred.git"
+	},
+	"contributors" : [
+		{
+			"name" : "Gabriel Hernandez",
+			"email" : "webspinner.gabriel@gmail.com",
+			"url" : "https://github.com/webspinner"
+		},
+		{
+			"name" : "Ben Loveridge",
+			"email" : "",
+			"url" : "https://github.com/bloveridge"
+		}
+	],
+	"devDependencies" : {
+		"vows" : ">=0.4.1"
 	}
 }
