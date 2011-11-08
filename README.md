@@ -1,6 +1,11 @@
 jQuery Deferred Library for Node js.
 ===========
 [website](http://webspinner.github.com/Deferred)
+
+jQuery Deferred solves the following problems:
+* support common deferred interface in node
+* give some access to the deferred library underpinning in the browser
+
 Usage :
 
 ```javascript
