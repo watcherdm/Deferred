@@ -29,6 +29,21 @@ vows.describe('Deferred Object').addBatch({
 			});
 		}
 	},
+	"when deferred is in rejection state": {
+		topic : Deferred(),
+		'the deferred object takes failure callbacks': function(topic){
+			assert.ok(topic.fail(function(){
+				assert.ok(true);
+			}));
+			assert.ok(topic.reject());
+		},
+		'the deferred object will execute failure callbacks even after being rejected' : function( topic ){
+			assert.ok(topic.isRejected);
+			topic.fail(function(){
+				assert.ok(true);
+			});
+		}
+	},
 	"when calling deferred as a constructor": {
 		topic : new Deferred(),
 		'we get a deferred object': function(topic){
