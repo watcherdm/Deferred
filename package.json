@@ -1,6 +1,6 @@
 {
 	"name" : "Deferred",
-	"version" : "0.0.4",
+	"version" : "0.1.0",
 	"description" : "A port of the jQuery Deferred library to node js.",
 	"keywords" : [
 		"promises",
@@ -25,6 +25,11 @@
 			"name" : "Ben Loveridge",
 			"email" : "",
 			"url" : "https://github.com/bloveridge"
+		},
+		{
+			"name" : "Richard Bateman",
+			"email" : "taxilian@gmail.com",
+			"url" : "https://github.com/taxilian"
 		}
 	],
 	"devDependencies" : {
