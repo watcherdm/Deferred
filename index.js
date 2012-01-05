@@ -1,6 +1,9 @@
 (function(define){
 	define([], function(){
 
+        var forEach = Array.prototype.forEach;
+        var hasOwn = Object.prototype.hasOwnProperty;
+        var breaker = {};
         var isArray = function( elem ) {
             return typeof elem === "object" && elem instanceof Array;
         };
@@ -274,7 +277,7 @@
                                 done: [ fnDone, "resolve" ],
                                 fail: [ fnFail, "reject" ],
                                 progress: [ fnProgress, "notify" ]
-                            }, function( handler, data ) {
+                            }, function( data, handler ) {
                                 var fn = data[ 0 ],
                                     action = data[ 1 ],
                                     returned;
