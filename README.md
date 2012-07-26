@@ -15,9 +15,9 @@ var when = Deferred.when;
 
 var dfd = new Deferred() // || Deferred()
 dfd.done( function () {
-	alert("Deferred resolved!");
+	console.log("Deferred resolved!");
 } ).fail( function () {
-	alert("Deferred rejected!");
+	console.log("Deferred rejected!");
 } );
 
 setTimeout( function(){
