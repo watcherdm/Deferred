@@ -1,3 +1,4 @@
+[![build status](https://secure.travis-ci.org/webspinner/Deferred.png)](http://travis-ci.org/webspinner/Deferred)
 jQuery Deferred Library for Node js.
 ===========
 [website](http://webspinner.github.com/Deferred)
