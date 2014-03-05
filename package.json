@@ -1,6 +1,6 @@
 {
 	"name" : "Deferred",
-	"version" : "0.1.1",
+	"version" : "0.1.2",
 	"description" : "A port of the jQuery Deferred library to node js.",
 	"keywords" : [
 		"promises",
@@ -34,5 +34,14 @@
 	],
 	"devDependencies" : {
 		"vows" : ">=0.4.1"
-	}
+	},
+	"licenses": [
+	        {
+	            "type": "GPL"
+	        },
+	        {
+	            "type": "MIT"
+	        }
+	]
+	
 }
