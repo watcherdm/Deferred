@@ -1,34 +1,19 @@
 (function(define){
-	define([], function(){
+    define([], function(){
 
-        var forEach = Array.prototype.forEach;
-        var hasOwn = Object.prototype.hasOwnProperty;
-        var breaker = {};
-        var isArray = function( elem ) {
-            return typeof elem === "object" && elem instanceof Array;
-        };
-        var isFunction = function ( fn ) {
-            return typeof fn === "function";
-        };
+        // Large portions of this work were done by the underscore.Deferred team;
+        // underscore.deferred (https://github.com/wookiehangover/underscore.Deferred)
+        // is basically the same library but intended for use with underscore.js
+        var breaker = {},
+        AP = Array.prototype,
+        OP = Object.prototype,
 
-        var // Static reference to slice
-            sliceDeferred = [].slice;
+        hasOwn = OP.hasOwnProperty,
+        toString = OP.toString,
+        forEach = AP.forEach,
+        indexOf = AP.indexOf,
+        slice = AP.slice;
 
-        // String to Object flags format cache
-        var flagsCache = {};
-
-        // Convert String-formatted flags into Object-formatted ones and store in cache
-        function createFlags( flags ) {
-            var object = flagsCache[ flags ] = {},
-                i, length;
-            flags = flags.split( /\s+/ );
-            for ( i = 0, length = flags.length; i < length; i++ ) {
-                object[ flags[i] ] = true;
-            }
-            return object;
-        }
-
-        // Borrowed shamelessly from https://github.com/wookiehangover/underscore.Deferred
         var _each = function( obj, iterator, context ) {
             var key, i, l;
 
@@ -54,275 +39,332 @@
             }
         };
 
-        var Callbacks = function( flags ) {
+        // _.isFunction
+        var _isFunction = function( obj ) {
+            return !!(obj && obj.constructor && obj.call && obj.apply);
+        };
 
-            // Convert flags from String-formatted to Object-formatted
+        // _.extend
+        var _extend = function( obj ) {
+
+            _each( slice.call( arguments, 1), function( source ) {
+                var prop;
+
+                for ( prop in source ) {
+                    if ( source[prop] !== void 0 ) {
+                        obj[ prop ] = source[ prop ];
+                    }
+                }
+            });
+            return obj;
+        };
+
+        // $.inArray
+        var _inArray = function( elem, arr, i ) {
+            var len;
+
+            if ( arr ) {
+                if ( indexOf ) {
+                    return indexOf.call( arr, elem, i );
+                }
+
+                len = arr.length;
+                i = i ? i < 0 ? Math.max( 0, len + i ) : i : 0;
+
+                for ( ; i < len; i++ ) {
+                    // Skip accessing in sparse arrays
+                    if ( i in arr && arr[ i ] === elem ) {
+                        return i;
+                    }
+                }
+            }
+
+            return -1;
+        };
+
+        // And some jQuery specific helpers
+
+        var class2type = {};
+
+        // Populate the class2type map
+        _each("Boolean Number String Function Array Date RegExp Object".split(" "), function(name, i) {
+            class2type[ "[object " + name + "]" ] = name.toLowerCase();
+        });
+
+        var _type = function( obj ) {
+            return obj == null ?
+                String( obj ) :
+                class2type[ toString.call(obj) ] || "object";
+        };
+
+        // Now start the jQuery-cum-Underscore implementation. Some very
+        // minor changes to the jQuery source to get this working.
+
+        // String to Object options format cache
+        var optionsCache = {};
+
+        // Convert String-formatted options into Object-formatted ones and store in cache
+        function createOptions( options ) {
+            var object = optionsCache[ options ] = {};
+            _each( options.split( /\s+/ ), function( flag ) {
+                object[ flag ] = true;
+            });
+            return object;
+        }
+
+        var Callbacks = function( options ) {
+
+            // Convert options from String-formatted to Object-formatted if needed
             // (we check in cache first)
-            flags = flags ? ( flagsCache[ flags ] || createFlags( flags ) ) : {};
+            options = typeof options === "string" ?
+                ( optionsCache[ options ] || createOptions( options ) ) :
+                _extend( {}, options );
 
-            var // Actual callback list
-                list = [],
-                // Stack of fire calls for repeatable lists
-                stack = [],
-                // Last fire value (for non-forgettable lists)
-                memory,
-                // Flag to know if list is currently firing
-                firing,
-                // First callback to fire (used internally by add and fireWith)
-                firingStart,
-                // End of the loop when firing
-                firingLength,
-                // Index of currently firing callback (modified by remove if needed)
-                firingIndex,
-                // Add one or several callbacks to the list
-                add = function( args ) {
-                    var i,
-                        length,
-                        elem,
-                        type,
-                        actual;
-                    for ( i = 0, length = args.length; i < length; i++ ) {
-                        elem = args[ i ];
-                        if ( isArray(elem) ) {
-                            // Inspect recursively
-                            add( elem );
-                        } else if ( isFunction(elem) ) {
-                            // Add if not in unique mode and callback is not in
-                            if ( !flags.unique || !self.has( elem ) ) {
-                                list.push( elem );
-                            }
-                        }
+            var // Last fire value (for non-forgettable lists)
+            memory,
+            // Flag to know if list was already fired
+            fired,
+            // Flag to know if list is currently firing
+            firing,
+            // First callback to fire (used internally by add and fireWith)
+            firingStart,
+            // End of the loop when firing
+            firingLength,
+            // Index of currently firing callback (modified by remove if needed)
+            firingIndex,
+            // Actual callback list
+            list = [],
+            // Stack of fire calls for repeatable lists
+            stack = !options.once && [],
+            // Fire callbacks
+            fire = function( data ) {
+                memory = options.memory && data;
+                fired = true;
+                firingIndex = firingStart || 0;
+                firingStart = 0;
+                firingLength = list.length;
+                firing = true;
+                for ( ; list && firingIndex < firingLength; firingIndex++ ) {
+                    if ( list[ firingIndex ].apply( data[ 0 ], data[ 1 ] ) === false && options.stopOnFalse ) {
+                        memory = false; // To prevent further calls using add
+                        break;
                     }
-                },
-                // Fire callbacks
-                fire = function( context, args ) {
-                    args = args || [];
-                    memory = !flags.memory || [ context, args ];
-                    firing = true;
-                    firingIndex = firingStart || 0;
-                    firingStart = 0;
-                    firingLength = list.length;
-                    for ( ; list && firingIndex < firingLength; firingIndex++ ) {
-                        if ( list[ firingIndex ].apply( context, args ) === false && flags.stopOnFalse ) {
-                            memory = true; // Mark as halted
-                            break;
+                }
+                firing = false;
+                if ( list ) {
+                    if ( stack ) {
+                        if ( stack.length ) {
+                            fire( stack.shift() );
                         }
+                    } else if ( memory ) {
+                        list = [];
+                    } else {
+                        self.disable();
                     }
-                    firing = false;
+                }
+            },
+            // Actual Callbacks object
+            self = {
+                // Add a callback or a collection of callbacks to the list
+                add: function() {
                     if ( list ) {
-                        if ( !flags.once ) {
-                            if ( stack && stack.length ) {
-                                memory = stack.shift();
-                                self.fireWith( memory[ 0 ], memory[ 1 ] );
-                            }
-                        } else if ( memory === true ) {
-                            self.disable();
-                        } else {
-                            list = [];
+                        // First, we save the current length
+                        var start = list.length;
+                        (function add( args ) {
+                            _each( args, function( arg ) {
+                                var type = _type( arg );
+                                if ( type === "function" ) {
+                                    if ( !options.unique || !self.has( arg ) ) {
+                                        list.push( arg );
+                                    }
+                                } else if ( arg && arg.length && type !== "string" ) {
+                                    // Inspect recursively
+                                    add( arg );
+                                }
+                            });
+                        })( arguments );
+                        // Do we need to add the callbacks to the
+                        // current firing batch?
+                        if ( firing ) {
+                            firingLength = list.length;
+                            // With memory, if we're not firing then
+                            // we should call right away
+                        } else if ( memory ) {
+                            firingStart = start;
+                            fire( memory );
                         }
                     }
+                    return this;
                 },
-                // Actual Callbacks object
-                self = {
-                    // Add a callback or a collection of callbacks to the list
-                    add: function() {
-                        if ( list ) {
-                            var length = list.length;
-                            add( arguments );
-                            // Do we need to add the callbacks to the
-                            // current firing batch?
-                            if ( firing ) {
-                                firingLength = list.length;
-                            // With memory, if we're not firing then
-                            // we should call right away, unless previous
-                            // firing was halted (stopOnFalse)
-                            } else if ( memory && memory !== true ) {
-                                firingStart = length;
-                                fire( memory[ 0 ], memory[ 1 ] );
-                            }
-                        }
-                        return this;
-                    },
-                    // Remove a callback from the list
-                    remove: function() {
-                        if ( list ) {
-                            var args = arguments,
-                                argIndex = 0,
-                                argLength = args.length;
-                            for ( ; argIndex < argLength ; argIndex++ ) {
-                                for ( var i = 0; i < list.length; i++ ) {
-                                    if ( args[ argIndex ] === list[ i ] ) {
-                                        // Handle firingIndex and firingLength
-                                        if ( firing ) {
-                                            if ( i <= firingLength ) {
-                                                firingLength--;
-                                                if ( i <= firingIndex ) {
-                                                    firingIndex--;
-                                                }
-                                            }
-                                        }
-                                        // Remove the element
-                                        list.splice( i--, 1 );
-                                        // If we have some unicity property then
-                                        // we only need to do this once
-                                        if ( flags.unique ) {
-                                            break;
-                                        }
+                // Remove a callback from the list
+                remove: function() {
+                    if ( list ) {
+                        _each( arguments, function( arg ) {
+                            var index;
+                            while( ( index = _inArray( arg, list, index ) ) > -1 ) {
+                                list.splice( index, 1 );
+                                // Handle firing indexes
+                                if ( firing ) {
+                                    if ( index <= firingLength ) {
+                                        firingLength--;
+                                    }
+                                    if ( index <= firingIndex ) {
+                                        firingIndex--;
                                     }
                                 }
                             }
-                        }
-                        return this;
-                    },
-                    // Control if a given callback is in the list
-                    has: function( fn ) {
-                        if ( list ) {
-                            var i = 0,
-                                length = list.length;
-                            for ( ; i < length; i++ ) {
-                                if ( fn === list[ i ] ) {
-                                    return true;
-                                }
-                            }
-                        }
-                        return false;
-                    },
-                    // Remove all callbacks from the list
-                    empty: function() {
-                        list = [];
-                        return this;
-                    },
-                    // Have the list do nothing anymore
-                    disable: function() {
-                        list = stack = memory = undefined;
-                        return this;
-                    },
-                    // Is it disabled?
-                    disabled: function() {
-                        return !list;
-                    },
-                    // Lock the list in its current state
-                    lock: function() {
-                        stack = undefined;
-                        if ( !memory || memory === true ) {
-                            self.disable();
-                        }
-                        return this;
-                    },
-                    // Is it locked?
-                    locked: function() {
-                        return !stack;
-                    },
-                    // Call all callbacks with the given context and arguments
-                    fireWith: function( context, args ) {
-                        if ( stack ) {
-                            if ( firing ) {
-                                if ( !flags.once ) {
-                                    stack.push( [ context, args ] );
-                                }
-                            } else if ( !( flags.once && memory ) ) {
-                                fire( context, args );
-                            }
-                        }
-                        return this;
-                    },
-                    // Call all the callbacks with the given arguments
-                    fire: function() {
-                        self.fireWith( this, arguments );
-                        return this;
-                    },
-                    // To know if the callbacks have already been called at least once
-                    fired: function() {
-                        return !!memory;
+                        });
                     }
-                };
+                    return this;
+                },
+                // Control if a given callback is in the list
+                has: function( fn ) {
+                    return _inArray( fn, list ) > -1;
+                },
+                // Remove all callbacks from the list
+                empty: function() {
+                    list = [];
+                    return this;
+                },
+                // Have the list do nothing anymore
+                disable: function() {
+                    list = stack = memory = undefined;
+                    return this;
+                },
+                // Is it disabled?
+                disabled: function() {
+                    return !list;
+                },
+                // Lock the list in its current state
+                lock: function() {
+                    stack = undefined;
+                    if ( !memory ) {
+                        self.disable();
+                    }
+                    return this;
+                },
+                // Is it locked?
+                locked: function() {
+                    return !stack;
+                },
+                // Call all callbacks with the given context and arguments
+                fireWith: function( context, args ) {
+                    args = args || [];
+                    args = [ context, args.slice ? args.slice() : args ];
+                    if ( list && ( !fired || stack ) ) {
+                        if ( firing ) {
+                            stack.push( args );
+                        } else {
+                            fire( args );
+                        }
+                    }
+                    return this;
+                },
+                // Call all the callbacks with the given arguments
+                fire: function() {
+                    self.fireWith( this, arguments );
+                    return this;
+                },
+                // To know if the callbacks have already been called at least once
+                fired: function() {
+                    return !!fired;
+                }
+            };
 
             return self;
         };
 
         var Deferred = function( func ) {
-            var doneList = Callbacks( "once memory" ),
-                failList = Callbacks( "once memory" ),
-                progressList = Callbacks( "memory" ),
-                state = "pending",
-                lists = {
-                    resolve: doneList,
-                    reject: failList,
-                    notify: progressList
+
+            var tuples = [
+                // action, add listener, listener list, final state
+                [ "resolve", "done", Callbacks("once memory"), "resolved" ],
+                [ "reject", "fail", Callbacks("once memory"), "rejected" ],
+                [ "notify", "progress", Callbacks("memory") ]
+            ],
+            state = "pending",
+            promise = {
+                state: function() {
+                    return state;
                 },
-                promise = {
-                    done: doneList.add,
-                    fail: failList.add,
-                    progress: progressList.add,
+                always: function() {
+                    deferred.done( arguments ).fail( arguments );
+                    return this;
+                },
+                then: function( /* fnDone, fnFail, fnProgress */ ) {
+                    var fns = arguments;
 
-                    state: function() {
-                        return state;
-                    },
+                    return Deferred(function( newDefer ) {
 
-                    // Deprecated
-                    isResolved: doneList.fired,
-                    isRejected: failList.fired,
+                        _each( tuples, function( tuple, i ) {
+                            var action = tuple[ 0 ],
+                            fn = fns[ i ];
 
-                    then: function( doneCallbacks, failCallbacks, progressCallbacks ) {
-                        deferred.done( doneCallbacks ).fail( failCallbacks ).progress( progressCallbacks );
-                        return this;
-                    },
-                    always: function() {
-                        deferred.done.apply( deferred, arguments ).fail.apply( deferred, arguments );
-                        return this;
-                    },
-                    pipe: function( fnDone, fnFail, fnProgress ) {
-                        return Deferred(function( newDefer ) {
-                            _each( {
-                                done: [ fnDone, "resolve" ],
-                                fail: [ fnFail, "reject" ],
-                                progress: [ fnProgress, "notify" ]
-                            }, function( data, handler ) {
-                                var fn = data[ 0 ],
-                                    action = data[ 1 ],
-                                    returned;
-                                if ( isFunction( fn ) ) {
-                                    deferred[ handler ](function() {
-                                        returned = fn.apply( this, arguments );
-                                        if ( returned && isFunction( returned.promise ) ) {
-                                            returned.promise().then( newDefer.resolve, newDefer.reject, newDefer.notify );
-                                        } else {
-                                            newDefer[ action + "With" ]( this === deferred ? newDefer : this, [ returned ] );
-                                        }
-                                    });
-                                } else {
-                                    deferred[ handler ]( newDefer[ action ] );
+                            // deferred[ done | fail | progress ] for forwarding actions to newDefer
+                            deferred[ tuple[1] ]( _isFunction( fn ) ?
+
+                                                 function() {
+                                var returned;
+                                try { returned = fn.apply( this, arguments ); } catch(e){
+                                    newDefer.reject(e);
+                                    return;
                                 }
-                            });
-                        }).promise();
-                    },
-                    // Get a promise for this deferred
-                    // If obj is provided, the promise aspect is added to the object
-                    promise: function( obj ) {
-                        if ( !obj ) {
-                            obj = promise;
-                        } else {
-                            for ( var key in promise ) {
-                                obj[ key ] = promise[ key ];
-                            }
-                        }
-                        return obj;
-                    }
+
+                                if ( returned && _isFunction( returned.promise ) ) {
+                                    returned.promise()
+                                    .done( newDefer.resolve )
+                                    .fail( newDefer.reject )
+                                    .progress( newDefer.notify );
+                                } else {
+                                    newDefer[ action !== "notify" ? 'resolveWith' : action + 'With']( this === deferred ? newDefer : this, [ returned ] );
+                                }
+                            } :
+
+                                newDefer[ action ]
+                                                );
+                        });
+
+                        fns = null;
+
+                    }).promise();
+
                 },
-                deferred = promise.promise({}),
-                key;
+                // Get a promise for this deferred
+                // If obj is provided, the promise aspect is added to the object
+                promise: function( obj ) {
+                    return obj != null ? _extend( obj, promise ) : promise;
+                }
+            },
+            deferred = {};
 
-            for ( key in lists ) {
-                deferred[ key ] = lists[ key ].fire;
-                deferred[ key + "With" ] = lists[ key ].fireWith;
-            }
+            // Keep pipe for back-compat
+            promise.pipe = promise.then;
 
-            // Handle state
-            deferred.done( function() {
-                state = "resolved";
-            }, failList.disable, progressList.lock ).fail( function() {
-                state = "rejected";
-            }, doneList.disable, progressList.lock );
+            // Add list-specific methods
+            _each( tuples, function( tuple, i ) {
+                var list = tuple[ 2 ],
+                stateString = tuple[ 3 ];
+
+                // promise[ done | fail | progress ] = list.add
+                promise[ tuple[1] ] = list.add;
+
+                // Handle state
+                if ( stateString ) {
+                    list.add(function() {
+                        // state = [ resolved | rejected ]
+                        state = stateString;
+
+                        // [ reject_list | resolve_list ].disable; progress_list.lock
+                    }, tuples[ i ^ 1 ][ 2 ].disable, tuples[ 2 ][ 2 ].lock );
+                }
+
+                // deferred[ resolve | reject | notify ] = list.fire
+                deferred[ tuple[0] ] = list.fire;
+                deferred[ tuple[0] + "With" ] = list.fireWith;
+            });
+
+            // Make the deferred a promise
+            promise.promise( deferred );
 
             // Call given func if any
             if ( func ) {
@@ -334,46 +376,60 @@
         };
 
         // Deferred helper
-        var when = function( firstParam ) {
-            var args = sliceDeferred.call( arguments, 0 ),
-                i = 0,
-                length = args.length,
-                pValues = new Array( length ),
-                count = length,
-                pCount = length,
-                deferred = length <= 1 && firstParam && isFunction( firstParam.promise ) ?
-                    firstParam :
-                    Deferred(),
-                promise = deferred.promise();
-            function resolveFunc( i ) {
+        var when = function( subordinate /* , ..., subordinateN */ ) {
+
+            var i = 0,
+            resolveValues = ( _type(subordinate) === 'array' && arguments.length === 1 ) ? subordinate : slice.call( arguments ),
+            length = resolveValues.length;
+
+            if ( _type(subordinate) === 'array' && subordinate.length === 1 ) {
+                subordinate = subordinate[ 0 ];
+            }
+
+            // the count of uncompleted subordinates
+            var remaining = length !== 1 || ( subordinate && _isFunction( subordinate.promise ) ) ? length : 0,
+
+            // the master Deferred. If resolveValues consist of only a single Deferred, just use that.
+            deferred = remaining === 1 ? subordinate : Deferred(),
+
+            // Update function for both resolve and progress values
+            updateFunc = function( i, contexts, values ) {
                 return function( value ) {
-                    args[ i ] = arguments.length > 1 ? sliceDeferred.call( arguments, 0 ) : value;
-                    if ( !( --count ) ) {
-                        deferred.resolveWith( deferred, args );
+                    contexts[ i ] = this;
+                    values[ i ] = arguments.length > 1 ? slice.call( arguments ) : value;
+                    if( values === progressValues ) {
+                        deferred.notifyWith( contexts, values );
+                    } else if ( !( --remaining ) ) {
+                        deferred.resolveWith( contexts, values );
                     }
                 };
-            }
-            function progressFunc( i ) {
-                return function( value ) {
-                    pValues[ i ] = arguments.length > 1 ? sliceDeferred.call( arguments, 0 ) : value;
-                    deferred.notifyWith( promise, pValues );
-                };
-            }
+            },
+
+            progressValues, progressContexts, resolveContexts;
+
+            // add listeners to Deferred subordinates; treat others as resolved
             if ( length > 1 ) {
+                progressValues = new Array( length );
+                progressContexts = new Array( length );
+                resolveContexts = new Array( length );
                 for ( ; i < length; i++ ) {
-                    if ( args[ i ] && args[ i ].promise && isFunction( args[ i ].promise ) ) {
-                        args[ i ].promise().then( resolveFunc(i), deferred.reject, progressFunc(i) );
+                    if ( resolveValues[ i ] && _isFunction( resolveValues[ i ].promise ) ) {
+                        resolveValues[ i ].promise()
+                        .done( updateFunc( i, resolveContexts, resolveValues ) )
+                        .fail( deferred.reject )
+                        .progress( updateFunc( i, progressContexts, progressValues ) );
                     } else {
-                        --count;
+                        --remaining;
                     }
                 }
-                if ( !count ) {
-                    deferred.resolveWith( deferred, args );
-                }
-            } else if ( deferred !== firstParam ) {
-                deferred.resolveWith( deferred, length ? [ firstParam ] : [] );
             }
-            return promise;
+
+            // if we're not waiting on anything, resolve the master
+            if ( !remaining ) {
+                deferred.resolveWith( resolveContexts, resolveValues );
+            }
+
+            return deferred.promise();
         };
 
         Deferred.when = when;
