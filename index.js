@@ -287,6 +287,12 @@
                 state: function() {
                     return state;
                 },
+                isResolved: function() {
+                    return state == 'resolved';
+                },
+                isRejected: function() {
+                    return state == 'rejected';
+                },
                 always: function() {
                     deferred.done( arguments ).fail( arguments );
                     return this;
