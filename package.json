@@ -33,7 +33,8 @@
 		}
 	],
 	"devDependencies" : {
-		"vows" : ">=0.4.1"
+		"vows" : ">=0.4.1",
+		"q": "^1.0.1"
 	},
 	"licenses": [
 	        {

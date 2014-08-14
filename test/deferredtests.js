@@ -1,12 +1,13 @@
 var vows = require("vows"),
 	assert = require("assert"),
-	Deferred = require("../index");
+	Deferred = require("../index"),
+	Q = require('q');
 
 vows.describe('Deferred Object').addBatch({
 	"when calling deferred as a function": {
 		topic : Deferred(),
 		'we get a deferred object': function(topic){
-			assert.ok(typeof topic === "object" 
+			assert.ok(typeof topic === "object"
 				&& typeof topic.resolve === "function");
 		},
 		'the deferred object has all the appropriate methods' : function(topic){
@@ -47,7 +48,7 @@ vows.describe('Deferred Object').addBatch({
 	"when calling deferred as a constructor": {
 		topic : new Deferred(),
 		'we get a deferred object': function(topic){
-			assert.ok(typeof topic === "object" 
+			assert.ok(typeof topic === "object"
 				&& typeof topic.resolve === "function");
 		},
 		'the deferred object has all the appropriate methods' : function(topic){
@@ -101,5 +102,45 @@ vows.describe('Deferred Object').addBatch({
 				assert.ok(val);
 			});
 		}
-	}
+	},
+    "when using with another Promises/A+ compliant library" : {
+        topic: function() {
+            var objs = [
+                Q.defer(),
+                Deferred(),
+                new Deferred()
+            ];
+            var topic = [
+                objs[0].promise,
+                objs[1].promise(),
+                objs[2].promise()
+            ];
+            objs[0].resolve(1);
+            objs[1].resolve(2);
+            objs[2].resolve(3);
+            return topic;
+        },
+        'Chaining Deferred through the other library should work': function(topic) {
+            assert.ok(topic[0].then(function(a) {
+                assert.ok(a == 1);
+                return topic[1].then(function(b) {
+                    assert.ok(b == 2);
+                    return topic[2];
+                });
+            }).then(function(c) {
+                assert.ok(c == 3);
+            }));
+        },
+        'Chaining the other library through Deferred should work': function(topic) {
+            assert.ok(topic[2].then(function(c) {
+                assert.ok(c == 3);
+                return topic[1].then(function(b) {
+                    assert.ok(b == 2);
+                    return topic[0];
+                });
+            }).then(function(c) {
+                assert.ok(c == 1);
+            }));
+        }
+    }
  }).export(module);
